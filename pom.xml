@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.screenbridge</groupId>
+    <artifactId>screenbridge</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <name>ScreenBridge</name>
+    <description>ScreenBridge is a Windows desktop launcher for Android device mirroring with adb and scrcpy.</description>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://opensource.org/licenses/MIT</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
+
+        <app.name>ScreenBridge</app.name>
+        <app.mainClass>com.screenbridge.App</app.mainClass>
+
+        <jp.type>app-image</jp.type>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <pluginManagement><!-- lock down plugins versions to avoid using Maven defaults (may be moved to parent pom) -->
+            <plugins>
+                <!-- clean lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#clean_Lifecycle -->
+                <plugin>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.1.0</version>
+                </plugin>
+                <!-- default lifecycle, jar packaging: see https://maven.apache.org/ref/current/maven-core/default-bindings.html#Plugin_bindings_for_jar_packaging -->
+                <plugin>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.0.2</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.8.0</version>
+                    <configuration>
+                        <encoding>${project.build.sourceEncoding}</encoding>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>2.22.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.0.2</version>
+                    <configuration>
+                        <archive>
+                            <manifest>
+                                <mainClass>com.screenbridge.App</mainClass>
+                            </manifest>
+                        </archive>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-install-plugin</artifactId>
+                    <version>2.5.2</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                    <version>2.8.2</version>
+                </plugin>
+                <!-- site lifecycle, see https://maven.apache.org/ref/current/maven-core/lifecycles.html#site_Lifecycle -->
+                <plugin>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>3.7.1</version>
+                </plugin>
+                <plugin>
+                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>${maven.compiler.release}</release>
+                    <encoding>${project.build.sourceEncoding}</encoding>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.2</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <shadedArtifactAttached>false</shadedArtifactAttached>
+                            <finalName>${app.name}</finalName>
+                            <transformers>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>${app.mainClass}</mainClass>
+                                </transformer>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.2.0</version>
+                <executions>
+                    <execution>
+                        <id>jpackage</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <property environment="env"/>
+                                <fail unless="env.JAVA_HOME">JAVA_HOME must point to a JDK with jpackage.</fail>
+
+                                <mkdir dir="${project.build.directory}/jpackage-input"/>
+                                <mkdir dir="${project.build.directory}/dist"/>
+
+                                <copy
+                                        file="${project.build.directory}/${app.name}.jar"
+                                        tofile="${project.build.directory}/jpackage-input/${app.name}.jar"
+                                        overwrite="true"/>
+
+                                <copy todir="${project.build.directory}/jpackage-input" overwrite="true"
+                                      failonerror="false">
+                                    <fileset dir="${project.basedir}">
+                                        <include name="LICENSE"/>
+                                        <include name="THIRD_PARTY_NOTICES.md"/>
+                                    </fileset>
+                                </copy>
+
+                                <copy todir="${project.build.directory}/jpackage-input" overwrite="true"
+                                      failonerror="false">
+                                    <fileset dir="${project.basedir}/src/main/resources/packaging" erroronmissingdir="false"/>
+                                </copy>
+
+                                <exec executable="${env.JAVA_HOME}/bin/jpackage.exe" failonerror="true">
+                                    <arg value="--type"/>
+                                    <arg value="${jp.type}"/>
+
+                                    <arg value="--name"/>
+                                    <arg value="${app.name}"/>
+
+                                    <arg value="--input"/>
+                                    <arg value="${project.build.directory}/jpackage-input"/>
+
+                                    <arg value="--main-jar"/>
+                                    <arg value="${app.name}.jar"/>
+
+                                    <arg value="--main-class"/>
+                                    <arg value="${app.mainClass}"/>
+
+                                    <arg value="--dest"/>
+                                    <arg value="${project.build.directory}/dist"/>
+
+                                    <arg value="--java-options"/>
+                                    <arg value="-Dfile.encoding=UTF-8"/>
+                                </exec>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+/**
+ * 在常见的打包目录中查找随应用放置的 scrcpy 和 adb 可执行文件。
+ */
 public final class ExecutableLocator {
     private ExecutableLocator() {
     }

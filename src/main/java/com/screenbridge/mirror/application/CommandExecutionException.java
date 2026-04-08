@@ -2,6 +2,9 @@ package com.screenbridge.mirror.application;
 
 import java.io.IOException;
 
+/**
+ * 表示 adb 命令执行失败，并携带失败类型和命令输出。
+ */
 public final class CommandExecutionException extends IOException {
     private final CommandFailureType failureType;
     private final String commandOutput;

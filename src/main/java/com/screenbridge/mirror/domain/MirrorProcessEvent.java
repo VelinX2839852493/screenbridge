@@ -1,5 +1,8 @@
 package com.screenbridge.mirror.domain;
 
+/**
+ * 表示 scrcpy 运行过程中产生的输出或生命周期事件。
+ */
 public record MirrorProcessEvent(MirrorProcessEventType type, String detail) {
     public static MirrorProcessEvent output(String detail) {
         return new MirrorProcessEvent(MirrorProcessEventType.OUTPUT, detail);

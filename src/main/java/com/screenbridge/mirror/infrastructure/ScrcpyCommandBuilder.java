@@ -5,6 +5,9 @@ import com.screenbridge.mirror.domain.MirrorConfig;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Builds the scrcpy startup command from a validated config.
+ */
 public final class ScrcpyCommandBuilder {
     private ScrcpyCommandBuilder() {
     }
@@ -28,6 +31,27 @@ public final class ScrcpyCommandBuilder {
         }
         if (isNotBlank(config.videoBitRate())) {
             command.add("--video-bit-rate=" + config.videoBitRate().trim());
+        }
+        if (config.windowWidth() != null) {
+            command.add("--window-width=" + config.windowWidth());
+        }
+        if (config.windowHeight() != null) {
+            command.add("--window-height=" + config.windowHeight());
+        }
+        if (config.fullscreen()) {
+            command.add("--fullscreen");
+        }
+        if (config.alwaysOnTop()) {
+            command.add("--always-on-top");
+        }
+        if (config.keyboardMode() != null && config.keyboardMode().usesCliValue()) {
+            command.add("--keyboard=" + config.keyboardMode().cliValue());
+        }
+        if (config.mouseMode() != null && config.mouseMode().usesCliValue()) {
+            command.add("--mouse=" + config.mouseMode().cliValue());
+        }
+        if (isNotBlank(config.pushTarget())) {
+            command.add("--push-target=" + config.pushTarget().trim());
         }
         if (config.noAudio()) {
             command.add("--no-audio");

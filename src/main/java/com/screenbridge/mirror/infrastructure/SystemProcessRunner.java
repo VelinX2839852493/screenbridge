@@ -7,6 +7,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * 使用 ProcessBuilder 执行外部命令的 ProcessRunner 实现。
+ */
 public final class SystemProcessRunner implements ProcessRunner {
     @Override
     public CommandResult run(List<String> command, Path workingDirectory) throws IOException, InterruptedException {

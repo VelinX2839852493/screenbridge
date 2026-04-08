@@ -3,6 +3,9 @@ package com.screenbridge.mirror.settings;
 import java.util.Optional;
 import java.util.prefs.Preferences;
 
+/**
+ * 基于 Java Preferences 的设置存储实现。
+ */
 public final class PreferencesSettingsStore implements SettingsStore {
     private final Preferences preferences;
 
@@ -24,7 +27,7 @@ public final class PreferencesSettingsStore implements SettingsStore {
         try {
             preferences.put(key, value);
         } catch (SecurityException ignored) {
-            // Ignore persistence failures and fall back to system defaults on next start.
+            // 忽略持久化失败，下次启动时回退到系统默认设置。
         }
     }
 }

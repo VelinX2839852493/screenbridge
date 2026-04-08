@@ -5,6 +5,9 @@ import com.screenbridge.mirror.domain.MirrorFormState;
 
 import java.util.List;
 
+/**
+ * View contract used by the controller.
+ */
 public interface MirrorView {
     MirrorFormState readFormState();
 
@@ -19,6 +22,8 @@ public interface MirrorView {
     void setConnectWifiEnabled(boolean enabled);
 
     void setMirrorButtons(boolean startEnabled, boolean stopEnabled);
+
+    void setFileTransferEnabled(boolean enabled);
 
     void appendLog(String message);
 

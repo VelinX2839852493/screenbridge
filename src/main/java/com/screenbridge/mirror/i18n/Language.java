@@ -3,6 +3,9 @@ package com.screenbridge.mirror.i18n;
 import java.util.Locale;
 import java.util.Optional;
 
+/**
+ * 定义程序支持的界面语言以及对应的持久化值。
+ */
 public enum Language {
     ZH_CN("zh_CN", Locale.SIMPLIFIED_CHINESE, "中文"),
     EN("en", Locale.ENGLISH, "English");

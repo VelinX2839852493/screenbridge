@@ -9,15 +9,21 @@ import com.screenbridge.mirror.i18n.LocaleManager;
 import com.screenbridge.mirror.i18n.Messages;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * Coordinates UI actions, request validation, background work, and process lifecycle.
+ */
 public final class MirrorController implements AutoCloseable {
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm:ss");
 
@@ -30,6 +36,7 @@ public final class MirrorController implements AutoCloseable {
     private final ExecutableFinder executableFinder;
     private final Map<Path, Boolean> adbRunningBeforeUse = new java.util.concurrent.ConcurrentHashMap<>();
     private final AtomicBoolean exitCleanupStarted = new AtomicBoolean();
+    private final AtomicBoolean fileTransferInProgress = new AtomicBoolean();
 
     private volatile Process mirrorProcess;
 
@@ -146,17 +153,19 @@ public final class MirrorController implements AutoCloseable {
             return;
         }
 
+        MirrorFormState formState = view.readFormState();
         MirrorLaunchRequest launchRequest;
         try {
             launchRequest = requestFactory.createLaunchRequest(
-                    view.readFormState(),
-                    buildWindowTitle(view.readFormState().selectedDevice()));
+                    formState,
+                    buildWindowTitle(formState.selectedDevice()));
         } catch (ValidationException exception) {
             view.showError(exception.title(), exception.getMessage());
             return;
         }
 
         rememberAdbState(launchRequest.adbPath());
+        logResolvedWindowFit(launchRequest, formState);
 
         try {
             mirrorProcess = mirrorService.startMirroring(launchRequest.config(), this::handleProcessEvent);
@@ -172,6 +181,55 @@ public final class MirrorController implements AutoCloseable {
 
     public void onStopMirror() {
         stopMirrorProcess(true);
+    }
+
+    public void onPushFiles(List<Path> files) {
+        List<Path> transferableFiles = normalizeTransferFiles(files);
+        if (transferableFiles.isEmpty()) {
+            view.showError(
+                    messages.get("error.fileTransferFailed.title"),
+                    messages.get("error.fileTransferNoFiles.message"));
+            return;
+        }
+        if (!fileTransferInProgress.compareAndSet(false, true)) {
+            view.showError(
+                    messages.get("error.fileTransferInProgress.title"),
+                    messages.get("error.fileTransferInProgress.message"));
+            return;
+        }
+
+        MirrorFormState formState = view.readFormState();
+        Path adbPath;
+        DeviceInfo device;
+        String pushTarget;
+        try {
+            adbPath = requestFactory.requireAdbPath(formState);
+            device = requestFactory.requireReadyDevice(formState);
+            pushTarget = requestFactory.resolvePushTarget(formState);
+        } catch (ValidationException exception) {
+            fileTransferInProgress.set(false);
+            view.showError(exception.title(), exception.getMessage());
+            return;
+        }
+
+        rememberAdbState(adbPath);
+        view.setFileTransferEnabled(false);
+        view.appendLog(messages.get("log.fileTransfer.start", transferableFiles.size(), pushTarget));
+
+        CompletableFuture
+                .runAsync(() -> pushFiles(adbPath, device.serial(), pushTarget, transferableFiles), backgroundExecutor)
+                .whenComplete((unused, error) -> {
+                    fileTransferInProgress.set(false);
+                    view.setFileTransferEnabled(true);
+                    if (error != null) {
+                        String localizedMessage = localizeError(rootCause(error));
+                        view.appendLog(messages.get("log.fileTransfer.failure", localizedMessage));
+                        view.showError(messages.get("error.fileTransferFailed.title"), localizedMessage);
+                        return;
+                    }
+
+                    view.appendLog(messages.get("log.fileTransfer.success", transferableFiles.size(), pushTarget));
+                });
     }
 
     public void onExit() {
@@ -251,7 +309,7 @@ public final class MirrorController implements AutoCloseable {
             try {
                 mirrorService.stopAdbServer(adbPath);
             } catch (IOException exception) {
-                // Ignore shutdown cleanup failures on exit.
+                // Ignore cleanup failures during exit.
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 return;
@@ -291,6 +349,7 @@ public final class MirrorController implements AutoCloseable {
                 case LIST_DEVICES -> messages.get("error.adb.devicesFailed", exception.commandOutput());
                 case CONNECT_WIRELESS -> messages.get("error.adb.connectFailed", exception.commandOutput());
                 case STOP_ADB_SERVER -> messages.get("error.adb.killServerFailed", exception.commandOutput());
+                case PUSH_FILE -> messages.get("error.adb.pushFailed", exception.commandOutput());
             };
         }
         return rootMessage(throwable);
@@ -321,5 +380,52 @@ public final class MirrorController implements AutoCloseable {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private void pushFiles(Path adbPath, String deviceSerial, String pushTarget, List<Path> files) {
+        for (Path file : files) {
+            try {
+                view.appendLog(messages.get("log.fileTransfer.itemStart", file.getFileName()));
+                mirrorService.pushFile(adbPath, deviceSerial, file, pushTarget);
+                view.appendLog(messages.get("log.fileTransfer.itemSuccess", file.getFileName()));
+            } catch (IOException exception) {
+                throw new RuntimeException(exception);
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new RuntimeException(exception);
+            }
+        }
+    }
+
+    private List<Path> normalizeTransferFiles(List<Path> files) {
+        List<Path> normalized = new ArrayList<>();
+        if (files == null) {
+            return normalized;
+        }
+
+        for (Path file : files) {
+            if (file == null) {
+                continue;
+            }
+
+            Path absoluteFile = file.toAbsolutePath().normalize();
+            if (Files.isRegularFile(absoluteFile)) {
+                normalized.add(absoluteFile);
+            }
+        }
+        return normalized;
+    }
+
+    private void logResolvedWindowFit(MirrorLaunchRequest launchRequest, MirrorFormState formState) {
+        if (!formState.fitWindowToScreen()
+                || launchRequest.config().windowWidth() == null
+                || launchRequest.config().windowHeight() == null) {
+            return;
+        }
+
+        view.appendLog(messages.get(
+                "log.windowFit.applied",
+                launchRequest.config().windowWidth(),
+                launchRequest.config().windowHeight()));
     }
 }

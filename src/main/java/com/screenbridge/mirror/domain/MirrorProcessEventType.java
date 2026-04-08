@@ -1,5 +1,8 @@
 package com.screenbridge.mirror.domain;
 
+/**
+ * 定义 scrcpy 进程上报的事件类型。
+ */
 public enum MirrorProcessEventType {
     OUTPUT,
     FORCE_SHUTDOWN,

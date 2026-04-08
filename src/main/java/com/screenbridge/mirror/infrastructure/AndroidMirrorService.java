@@ -13,12 +13,16 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+/**
+ * Default MirrorService implementation backed by adb and scrcpy processes.
+ */
 public final class AndroidMirrorService implements MirrorService {
     private final ProcessRunner processRunner;
 
@@ -68,6 +72,25 @@ public final class AndroidMirrorService implements MirrorService {
                 .map(this::commandPath)
                 .flatMap(Optional::stream)
                 .anyMatch(commandPath -> sameExecutable(commandPath, normalizedPath));
+    }
+
+    @Override
+    public void pushFile(Path adbPath, String deviceSerial, Path localFile, String remoteTarget)
+            throws IOException, InterruptedException {
+        List<String> command = new ArrayList<>();
+        command.add(adbPath.toString());
+        if (deviceSerial != null && !deviceSerial.isBlank()) {
+            command.add("-s");
+            command.add(deviceSerial);
+        }
+        command.add("push");
+        command.add(localFile.toAbsolutePath().normalize().toString());
+        command.add(remoteTarget);
+
+        CommandResult result = processRunner.run(command, adbPath.getParent());
+        if (result.exitCode() != 0) {
+            throw new CommandExecutionException(CommandFailureType.PUSH_FILE, result.output());
+        }
     }
 
     @Override

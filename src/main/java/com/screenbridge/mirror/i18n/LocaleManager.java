@@ -8,6 +8,9 @@ import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
+/**
+ * 管理当前界面语言、持久化保存，并在语言切换时通知监听者。
+ */
 public final class LocaleManager {
     private final SettingsStore settingsStore;
     private final Locale systemLocale;

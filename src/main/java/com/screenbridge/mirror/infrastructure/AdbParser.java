@@ -5,6 +5,9 @@ import com.screenbridge.mirror.domain.DeviceInfo;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 将 adb devices 输出解析成界面可用的设备对象。
+ */
 public final class AdbParser {
     private AdbParser() {
     }

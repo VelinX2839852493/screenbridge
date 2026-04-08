@@ -5,6 +5,9 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.ResourceBundle;
 
+/**
+ * 负责加载多语言资源，并按当前语言格式化文本。
+ */
 public final class Messages {
     private static final String BUNDLE_BASE_NAME = "i18n.messages";
 

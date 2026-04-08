@@ -9,6 +9,9 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
+/**
+ * Defines the service operations that interact with adb and scrcpy.
+ */
 public interface MirrorService {
     List<DeviceInfo> listDevices(Path adbPath) throws IOException, InterruptedException;
 
@@ -17,6 +20,9 @@ public interface MirrorService {
     void stopAdbServer(Path adbPath) throws IOException, InterruptedException;
 
     boolean isProcessRunning(Path executablePath);
+
+    void pushFile(Path adbPath, String deviceSerial, Path localFile, String remoteTarget)
+            throws IOException, InterruptedException;
 
     void stopProcessTree(Process process, Consumer<MirrorProcessEvent> eventConsumer);
 
